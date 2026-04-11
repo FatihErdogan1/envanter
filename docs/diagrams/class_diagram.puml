@@ -1,0 +1,377 @@
+@startuml
+
+hide empty members
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' ════════════════════════════════════
+'  ENUMS
+' ════════════════════════════════════
+package "model.enums" {
+
+  enum Role {
+    ADMIN
+    MANAGER
+    STAFF
+  }
+
+  enum AssetStatus {
+    AVAILABLE
+    IN_USE
+    MAINTENANCE
+    RETIRED
+  }
+
+  enum TransactionType {
+    IN
+    OUT
+    TRANSFER
+  }
+}
+
+' ════════════════════════════════════
+'  ENTITIES
+' ════════════════════════════════════
+package "model.entity" {
+
+  class User {
+    - id : int
+    - username : String
+    - passwordHash : String
+    - email : String
+    - role : Role
+    - isActive : boolean
+  }
+
+  class Category {
+    - id : int
+    - name : String
+    - description : String
+  }
+
+  class Supplier {
+    - id : int
+    - name : String
+    - contactEmail : String
+    - phone : String
+    - address : String
+  }
+
+  class Warehouse {
+    - id : int
+    - name : String
+    - locationAddress : String
+  }
+
+  class Product <<Builder>> {
+    - id : int
+    - sku : String
+    - name : String
+    - price : double
+    - quantityInStock : int
+    - category : Category
+  }
+
+  class "Product.ProductBuilder" as ProductBuilder {
+    + ProductBuilder(sku, name)
+    + id(int) : ProductBuilder
+    + category(Category) : ProductBuilder
+    + price(double) : ProductBuilder
+    + quantityInStock(int) : ProductBuilder
+    + build() : Product
+  }
+
+  class InventoryTransaction {
+    - id : int
+    - type : TransactionType
+    - quantity : int
+    - transactionDate : LocalDateTime
+    - notes : String
+  }
+
+  class Asset {
+    - id : int
+    - serialNumber : String
+    - name : String
+    - purchaseDate : LocalDate
+    - status : AssetStatus
+    - assignedToUsername : String
+  }
+
+  class AssetAssignment {
+    - id : int
+    - assetId : int
+    - assignedDate : LocalDateTime
+    - returnDate : LocalDateTime
+    - notes : String
+    + isActive() : boolean
+  }
+
+  class AssetTransfer {
+    - id : int
+    - assetId : int
+    - transferDate : LocalDateTime
+    - notes : String
+  }
+
+  class AssetMaintenance {
+    - id : int
+    - assetId : int
+    - startDate : LocalDateTime
+    - endDate : LocalDateTime
+    - description : String
+    - notes : String
+    + isActive() : boolean
+  }
+}
+
+' Entity ilişkileri
+Product "0..*" --> "1" Category
+ProductBuilder ..> Product : creates
+InventoryTransaction "0..*" --> "1" Product
+InventoryTransaction "0..*" --> "1" Warehouse : source
+InventoryTransaction "0..*" --> "0..1" Warehouse : destination
+InventoryTransaction "0..*" --> "1" User
+Asset "0..*" --> "1" Supplier
+Asset "0..*" --> "1" Warehouse
+AssetAssignment "0..*" --> "1" User
+AssetTransfer "0..*" --> "1" Warehouse : from
+AssetTransfer "0..*" --> "1" Warehouse : to
+
+' ════════════════════════════════════
+'  DAO LAYER
+' ════════════════════════════════════
+package "dao" {
+
+  interface IGenericDao<T> {
+    + insert(entity : T) : boolean
+    + update(entity : T) : boolean
+    + delete(id : int) : boolean
+    + getById(id : int) : T
+    + getAll() : List<T>
+  }
+
+  class CategoryDAO
+  class SupplierDAO
+  class UserDAO
+  class WarehouseDAO {
+    + countByWarehouseId(id : int) : int
+  }
+  class ProductDAO
+  class InventoryTransactionDAO {
+    + countByWarehouseId(id : int) : int
+    + countByProductId(id : int) : int
+    + getWarehouseStockReport() : List
+  }
+  class AssetDAO {
+    + updateStatus(id : int, s : AssetStatus) : boolean
+    + updateWarehouseId(id : int, wId : int) : boolean
+    + countByWarehouseId(id : int) : int
+    + getStatusSummaryByWarehouse() : List
+  }
+  class AssetAssignmentDAO {
+    + insert(a : AssetAssignment) : boolean
+    + closeAssignment(id : int) : boolean
+    + getActiveByAssetId(id : int) : AssetAssignment
+    + getHistoryByAssetId(id : int) : List
+  }
+  class AssetTransferDAO {
+    + insert(t : AssetTransfer) : boolean
+    + getHistoryByAssetId(id : int) : List
+  }
+  class AssetMaintenanceDAO {
+    + insert(m : AssetMaintenance) : boolean
+    + closeActive(assetId : int) : boolean
+    + getActiveByAssetId(id : int) : AssetMaintenance
+    + getHistoryByAssetId(id : int) : List
+  }
+}
+
+CategoryDAO           ..|> IGenericDao
+SupplierDAO           ..|> IGenericDao
+UserDAO               ..|> IGenericDao
+WarehouseDAO          ..|> IGenericDao
+ProductDAO            ..|> IGenericDao
+InventoryTransactionDAO ..|> IGenericDao
+AssetDAO              ..|> IGenericDao
+
+' ════════════════════════════════════
+'  SERVICE LAYER
+' ════════════════════════════════════
+package "service" {
+
+  class CategoryService {
+    + getAll() : List
+    + add() / update() / delete()
+  }
+
+  class SupplierService {
+    + getAll() : List
+    + add() / update() / delete()
+  }
+
+  class UserService {
+    + login(username, password) : User
+    + registerUser(User) : boolean
+    + updateUser() / deleteUser()
+  }
+
+  class WarehouseService {
+    + add() / update()
+    + deleteWarehouse(id : int) : boolean
+  }
+
+  class ProductService {
+    + addProduct() / updateProduct()
+    + deleteProduct(id : int) : boolean
+    + getLowStockProducts() : List
+  }
+
+  class InventoryService {
+    + processTransaction(t : InventoryTransaction)
+    + getWarehouseStockReport() : List
+  }
+
+  class AssetService {
+    + addAsset() / updateAsset() / deleteAsset()
+    + retireAsset(Asset) : boolean
+    + assignAsset(id, User, notes)
+    + returnAsset(id : int)
+    + transferAsset(id, from, to, notes)
+    + startMaintenance(id, desc, notes)
+    + endMaintenance(id : int)
+  }
+}
+
+CategoryService    --> CategoryDAO
+SupplierService    --> SupplierDAO
+UserService        --> UserDAO
+WarehouseService   --> WarehouseDAO
+WarehouseService   --> InventoryTransactionDAO
+WarehouseService   --> AssetDAO
+ProductService     --> ProductDAO
+ProductService     --> InventoryTransactionDAO
+InventoryService   --> ProductDAO
+InventoryService   --> InventoryTransactionDAO
+AssetService       --> AssetDAO
+AssetService       --> AssetAssignmentDAO
+AssetService       --> AssetTransferDAO
+AssetService       --> AssetMaintenanceDAO
+
+' ════════════════════════════════════
+'  CONTROLLER LAYER
+' ════════════════════════════════════
+package "controller" {
+
+  class CategoryController
+  class SupplierController
+  class UserController
+  class WarehouseController
+  class ProductController
+  class TransactionController
+  class AssetController
+  class DashboardController {
+    + getTotalProductCount() : int
+    + getLowStockCount() : int
+    + getTotalUserCount() : int
+  }
+}
+
+CategoryController    --> CategoryService
+SupplierController    --> SupplierService
+UserController        --> UserService
+WarehouseController   --> WarehouseService
+ProductController     --> ProductService
+TransactionController --> InventoryService
+AssetController       --> AssetService
+
+' ════════════════════════════════════
+'  UTIL
+' ════════════════════════════════════
+package "util" {
+
+  class DatabaseConnection <<Singleton>> {
+    - {static} instance : DatabaseConnection
+    + {static} getInstance() : DatabaseConnection
+    + getConnection() : Connection
+  }
+
+  class SessionManager <<static>> {
+    + {static} setCurrentUser(User)
+    + {static} getCurrentUser() : User
+    + {static} clearSession()
+  }
+
+  class PasswordUtil <<static>> {
+    + {static} hash(plain : String) : String
+  }
+}
+
+' ════════════════════════════════════
+'  VIEW LAYER
+' ════════════════════════════════════
+package "view" {
+
+  class LoginFrame
+  class RegisterFrame
+  class MainFrame {
+    - contentArea : JPanel
+    - activeButton : JButton
+    + switchPanel(JPanel)
+    - createDashboard() : DashboardPanel
+    - applyRolePermissions()
+  }
+
+  abstract class BaseManagementPanel {
+    # table : JTable
+    # tableModel : DefaultTableModel
+    # sorter : TableRowSorter
+    # {abstract} buildTable() : JPanel
+    # {abstract} buildForm() : JPanel
+    # showMsg(msg : String, color : Color)
+    # confirmDialog(msg : String) : boolean
+  }
+
+  class DashboardPanel {
+    - onNavigateToProducts : Runnable
+    - onNavigateToWarehouseStock : Runnable
+    - onNavigateToUsers : Runnable
+  }
+
+  class ProductManagementPanel
+  class CategoryManagementPanel
+  class SupplierManagementPanel
+  class WarehouseManagementPanel
+  class InventoryTransactionPanel
+  class WarehouseStockPanel
+  class AssetManagementPanel
+  class UserManagementPanel
+}
+
+ProductManagementPanel    --|> BaseManagementPanel
+CategoryManagementPanel   --|> BaseManagementPanel
+SupplierManagementPanel   --|> BaseManagementPanel
+WarehouseManagementPanel  --|> BaseManagementPanel
+InventoryTransactionPanel --|> BaseManagementPanel
+AssetManagementPanel      --|> BaseManagementPanel
+UserManagementPanel       --|> BaseManagementPanel
+
+MainFrame o-- DashboardPanel
+MainFrame o-- BaseManagementPanel
+
+DashboardPanel            --> DashboardController
+ProductManagementPanel    --> ProductController
+ProductManagementPanel    --> CategoryController
+CategoryManagementPanel   --> CategoryController
+SupplierManagementPanel   --> SupplierController
+WarehouseManagementPanel  --> WarehouseController
+InventoryTransactionPanel --> TransactionController
+InventoryTransactionPanel --> WarehouseController
+InventoryTransactionPanel --> ProductController
+AssetManagementPanel      --> AssetController
+AssetManagementPanel      --> UserController
+AssetManagementPanel      --> SupplierController
+AssetManagementPanel      --> WarehouseController
+UserManagementPanel       --> UserController
+
+@enduml

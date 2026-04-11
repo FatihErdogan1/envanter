@@ -1,0 +1,113 @@
+@startuml
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+actor Admin   as AD
+actor Manager as MG
+actor Staff   as ST
+
+rectangle "inventory.io" {
+
+  package "Oturum" {
+    usecase "Giriş Yap"  as UC_Login
+    usecase "Çıkış Yap"  as UC_Logout
+  }
+
+  package "Dashboard" {
+    usecase "Sistem Özetini Görüntüle" as UC_Dashboard
+  }
+
+  package "Ürün & Kategori" {
+    usecase "Ürün Ekle / Güncelle / Sil" as UC_Product
+    usecase "Kategori Yönet"             as UC_Category
+    usecase "Tedarikçi Yönet"            as UC_Supplier
+  }
+
+  package "Stok Hareketleri" {
+    usecase "Stok Girişi / Çıkışı Kaydet"  as UC_InOut
+    usecase "Depolar Arası Transfer"        as UC_StockTransfer
+    usecase "Depo Stok Durumunu Görüntüle" as UC_StockReport
+    usecase "Depo Yönet"                   as UC_Warehouse
+  }
+
+  package "Demirbaş Yönetimi" {
+    usecase "Demirbaş Ekle / Güncelle / Sil"          as UC_Asset
+    usecase "Hurdaya Ayır"                             as UC_Retire
+    usecase "Kullanıcıya Zimmetle"                     as UC_Assign
+    usecase "Zimmet Düşür"                             as UC_Return
+    usecase "Depoya Transfer Et"                       as UC_AssetTransfer
+    usecase "Bakıma Al"                                as UC_StartMaint
+    usecase "Bakımı Tamamla"                           as UC_EndMaint
+    usecase "Zimmet / Transfer / Bakım Geçmişi Görüntüle" as UC_History
+  }
+
+  package "Kullanıcı Yönetimi" {
+    usecase "Kullanıcı Ekle / Güncelle / Sil" as UC_Users
+    usecase "Rol Ata / Aktiflik Değiştir"     as UC_Role
+  }
+}
+
+' ── Oturum ───────────────────────────────────────────
+AD --> UC_Login
+MG --> UC_Login
+ST --> UC_Login
+AD --> UC_Logout
+MG --> UC_Logout
+ST --> UC_Logout
+
+' ── Dashboard ────────────────────────────────────────
+AD --> UC_Dashboard
+MG --> UC_Dashboard
+ST --> UC_Dashboard
+
+' ── Ürün & Kategori ──────────────────────────────────
+AD --> UC_Product
+MG --> UC_Product
+ST --> UC_Product
+AD --> UC_Category
+MG --> UC_Category
+AD --> UC_Supplier
+MG --> UC_Supplier
+
+' ── Stok ─────────────────────────────────────────────
+AD --> UC_InOut
+MG --> UC_InOut
+ST --> UC_InOut
+AD --> UC_StockTransfer
+MG --> UC_StockTransfer
+ST --> UC_StockTransfer
+AD --> UC_StockReport
+MG --> UC_StockReport
+ST --> UC_StockReport
+AD --> UC_Warehouse
+MG --> UC_Warehouse
+
+' ── Demirbaş ─────────────────────────────────────────
+AD --> UC_Asset
+MG --> UC_Asset
+ST --> UC_Asset
+AD --> UC_Retire
+MG --> UC_Retire
+AD --> UC_Assign
+MG --> UC_Assign
+ST --> UC_Assign
+AD --> UC_Return
+MG --> UC_Return
+ST --> UC_Return
+AD --> UC_AssetTransfer
+MG --> UC_AssetTransfer
+AD --> UC_StartMaint
+MG --> UC_StartMaint
+AD --> UC_EndMaint
+MG --> UC_EndMaint
+AD --> UC_History
+MG --> UC_History
+ST --> UC_History
+
+' ── Kullanıcı (yalnızca Admin) ───────────────────────
+AD --> UC_Users
+AD --> UC_Role
+
+@enduml
