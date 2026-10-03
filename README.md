@@ -41,7 +41,10 @@ Java 17 · Swing + FlatLaf 3.5 · MySQL (Connector/J 8.3, JDBC) · Maven · JUni
 Prerequisites: JDK 17+, Maven, and a local MySQL server.
 
 1. Create a MySQL database named `envanter` with the tables used by the DAOs (`Users`, `Products`, `Categories`, `Suppliers`, `Warehouses`, `Inventory_Transactions`, `Assets`, `Asset_Assignments`, `Asset_Transfers`, `Asset_Maintenance`). A schema script is not included in this repository.
-2. Set your connection URL, username and password in `src/main/java/org/example/util/DatabaseConnection.java`.
+2. Configure the database connection (credentials are not stored in the code). `DatabaseConnection` reads, in this order:
+   - environment variables `DB_URL`, `DB_USER`, `DB_PASSWORD`;
+   - otherwise a `db.properties` file in the working directory (or on the classpath) with the keys `db.url`, `db.user`, `db.password` — copy `db.properties.example` to `db.properties` and fill it in (it is git-ignored);
+   - otherwise the defaults `jdbc:mysql://localhost:3306/envanter?useSSL=false&serverTimezone=UTC`, user `root` and an empty password.
 3. Build and start the app:
 
    ```bash
